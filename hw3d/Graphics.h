@@ -4,6 +4,9 @@
 #include <d3d11.h>
 #include <vector>
 #include "DxgiInfoManager.h"
+#include <wrl.h>
+
+namespace wrl = Microsoft::WRL;
 
 class Graphics
 {
@@ -38,15 +41,15 @@ public:
 	Graphics( HWND hWnd );
 	Graphics( const Graphics& ) = delete;
 	Graphics& operator=( const Graphics& ) = delete;
-	~Graphics();
+	~Graphics() = default;
 	void EndFrame();
 	void ClearBuffer( float red,float green,float blue ) noexcept;
 private:
 #ifndef NDEBUG
 	DxgiInfoManager infoManager;
 #endif
-	ID3D11Device* pDevice = nullptr;
-	IDXGISwapChain* pSwap = nullptr;
-	ID3D11DeviceContext* pContext = nullptr;
-	ID3D11RenderTargetView* pTarget = nullptr;
+	wrl::ComPtr<ID3D11Device> pDevice;
+	wrl::ComPtr<IDXGISwapChain> pSwap;
+	wrl::ComPtr<ID3D11DeviceContext> pContext;
+	wrl::ComPtr<ID3D11RenderTargetView> pTarget;
 };
