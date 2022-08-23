@@ -2,6 +2,7 @@
 #include "dxerr.h"
 #include <sstream>
 #include <d3dcompiler.h>
+#include <DirectXMath.h>
 
 //namespace wrl = Microsoft::WRL;
 
@@ -99,7 +100,7 @@ void Graphics::ClearBuffer( float red,float green,float blue ) noexcept
 	pContext->ClearRenderTargetView( pTarget.Get(), color);
 }
 
-void Graphics::DrawTestTriangle() {
+void Graphics::DrawTestTriangle( float angle,float x,float y ) {
 
 	HRESULT hr;
 
@@ -125,7 +126,7 @@ void Graphics::DrawTestTriangle() {
 		{ -0.5f,-0.5f,0,0,255,0 },
 		{ -0.3f,0.3f,0,255,0,0 },
 		{ 0.3f,0.3f,0,0,255,0 },
-		{ 0.0f,-0.8f,255,0,0,0 },
+		{ 0.0f,-1.0f,255,0,0,0 },
 	};
 	vertices[0].color.g = 255;
 	wrl::ComPtr<ID3D11Buffer> pVertexBuffer;
@@ -166,6 +167,33 @@ void Graphics::DrawTestTriangle() {
 
 	// Bind index buffer to pipeline
 	pContext->IASetIndexBuffer(pIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0u);
+
+
+	// create constant buffer for transformation matrix
+	struct ConstantBuffer {
+		DirectX::XMMATRIX transformation;
+	};
+	const ConstantBuffer cb = {
+		DirectX::XMMatrixTranspose(
+			DirectX::XMMatrixRotationZ( angle ) *
+			DirectX::XMMatrixScaling( 3.0f / 4.0f, 1.0f, 1.0f ) *
+			DirectX::XMMatrixTranslation( x, y, 0.0f )
+		)
+	};
+	wrl::ComPtr<ID3D11Buffer> pConstantBuffer;
+	D3D11_BUFFER_DESC cbd = {};
+	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cbd.Usage = D3D11_USAGE_DYNAMIC; // update every frame
+	cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	cbd.MiscFlags = 0u; // Miscellaneous flags 
+	cbd.ByteWidth = sizeof(cb); // Size of the buffer in bytes.
+	cbd.StructureByteStride = 0u; // only one element. The size of each element in the buffer structure (in bytes) when the buffer represents a structured buffer. 
+	D3D11_SUBRESOURCE_DATA csd = {};
+	csd.pSysMem = &cb;
+	GFX_THROW_INFO(pDevice->CreateBuffer(&cbd, &csd, &pConstantBuffer));
+
+	// Bind index buffer to pipeline
+	pContext->VSSetConstantBuffers(0u, 1u, pConstantBuffer.GetAddressOf());
 
 
 	// create pixel shader
